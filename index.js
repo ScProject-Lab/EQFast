@@ -26,7 +26,7 @@ $.getJSON(" https://api.p2pquake.net/v2/history?codes=551", (data) => {
         data["0"]["earthquake"]["domesticTsunami"]
     ]
 
-    console.log(time, hyponame)
+    console.log(time, hyponame, magnitude)
 
     let hypoLatLng = new L.LatLng(data[0]["earthquake"]["hypocenter"]["latitude"], data[0]["earthquake"]["hypocenter"]["longitude"]);
     let hypoIconimage = L.icon({
@@ -52,7 +52,7 @@ $.getJSON(" https://api.p2pquake.net/v2/history?codes=551", (data) => {
 
     const map_maxscale = scaleMap[maxscale];
 
-    updateEarthquakeParam(time, map_maxscale, hyponame);
+    updateEarthquakeParam(time, map_maxscale, hyponame, magnitude);
 });
 
 
@@ -100,5 +100,34 @@ function updateEarthquakeParam(time, scale, name) {
 
     document.getElementsByClassName("latest-card_location")[0].textContent = name;
 
-    const formatted_time = 
+    // 日付フォーマット
+    const date = new Date(time);
+
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    const formatted_time = `${month}/${day} ${hours}:${minutes}`;
+    console.log(formatted_time);
+
+    document.getElementsByClassName("latest-card_date")[0].textContent = `${formatted_time}ごろ発生`;
+
+    // マグニチュード
+
+    let magnitude = -1
+
+    magnitude_class = document.getElementsByClassName("latest-card_magnitude")[0]
+
+    if (Number(magnitude) === -1) {
+        magnitude_class.textContent = "調査中"
+        magnitude_class.classList.add("investigate-text")
+    } else {
+        let formatted_magnitude = magnitude.toFixed(1)
+        magnitude_class.textContent = formatted_magnitude
+        console.log(formatted_magnitude)
+    }
+
+
+    //深さ
 }

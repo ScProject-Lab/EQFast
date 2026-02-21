@@ -69,6 +69,10 @@ body {
 }
 
 
+.latest-card_magnitude.investigate-text {
+    font-size: 20px;
+}
+
 .side-panel p, h2 {
     color: #fff;
 }
@@ -139,9 +143,13 @@ body {
 
 .latest-card_hypo-params {
     background-color: #2a364c;
-    padding: 5px 12px;
     border-radius: 8px;
     box-shadow: 0 0 8px #0000004b;
+    display: flex;
+    flex-direction: column;
+    padding: 5px 12px;
+    height: 92px;
+    box-sizing: border-box;
 }
 
 .latest-card_hypo-params_label {
@@ -149,12 +157,18 @@ body {
 }
 
 .latest-card_hypo-params_txt {
+    flex: 1;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 0;
 }
 
-.latest-card_magnitude, .latest-card_depth {
+.latest-card_magnitude,
+.latest-card_depth {
+    display: flex;
+    align-items: center;
+    line-height: 1;
     font-size: 28px;
     font-weight: 450;
 }
