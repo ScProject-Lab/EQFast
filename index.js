@@ -52,13 +52,13 @@ $.getJSON(" https://api.p2pquake.net/v2/history?codes=551", (data) => {
 
     const map_maxscale = scaleMap[maxscale];
 
-    updateEarthquakeParam(time, map_maxscale, hyponame, magnitude);
+    updateEarthquakeParam(time, map_maxscale, hyponame, magnitude, depth);
 });
 
 
 const latest_maxscale = document.querySelector(".latest-card_maxscale");
 
-function updateEarthquakeParam(time, scale, name) {
+function updateEarthquakeParam(time, scale, name, magnitude, depth) {
     
     const scaleClassMap = {
         "7": "seven-bg",
@@ -114,10 +114,7 @@ function updateEarthquakeParam(time, scale, name) {
     document.getElementsByClassName("latest-card_date")[0].textContent = `${formatted_time}ごろ発生`;
 
     // マグニチュード
-
-    let magnitude = -1
-
-    magnitude_class = document.getElementsByClassName("latest-card_magnitude")[0]
+    const magnitude_class = document.getElementsByClassName("latest-card_magnitude")[0]
 
     if (Number(magnitude) === -1) {
         magnitude_class.textContent = "調査中"
@@ -128,6 +125,17 @@ function updateEarthquakeParam(time, scale, name) {
         console.log(formatted_magnitude)
     }
 
-
     //深さ
+    const depth_class = document.getElementsByClassName("latest-card_depth")[0]
+    let num_depth = Number(depth)
+
+    if (num_depth === -1) {
+        depth_class.textContent = "調査中"
+        depth_class.classList.add("investigate-text")
+    } else if (num_depth === 0)  {
+        depth_class.textContent = "ごく浅い"
+        depth_class.classList.add("investigate-text")
+    } else {
+        depth_class.textContent = `${num_depth}km`
+    }
 }

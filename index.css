@@ -69,7 +69,8 @@ body {
 }
 
 
-.latest-card_magnitude.investigate-text {
+.latest-card_magnitude.investigate-text,
+.latest-card_depth.investigate-text {
     font-size: 20px;
 }
 
