@@ -1,8 +1,8 @@
-var map = L.map('map').setView([36.575, 137.984], 6);
+let map = L.map('map').setView([36.575, 137.984], 6);
 L.control.scale({ maxWidth: 150, position: 'bottomright', imperial: false }).addTo(map);
 map.zoomControl.setPosition('topright');
 
-var PolygonLater_Style = {
+let PolygonLater_Style = {
     "color": "#dde0e5",
     "weight": 1.5,
     "opacity": 0.25,
@@ -16,29 +16,49 @@ $.getJSON("prefectures.geojson", function (data) {
     }).addTo(map);
 }); 
 
-$.getJSON(" https://api.p2pquake.net/v2/history?codes=551", function (data) {
-    var [time, name, shindo, magnitude, depth] = [
+$.getJSON(" https://api.p2pquake.net/v2/history?codes=551", (data) => {
+    let [time, hyponame, maxscale, magnitude, depth, tsunami] = [
         data["0"]["earthquake"]["time"],
         data["0"]["earthquake"]["hypocenter"]["name"],
         data["0"]["earthquake"]["maxScale"],
         data["0"]["earthquake"]["hypocenter"]["magnitude"],
-        data["0"]["earthquake"]["hypocenter"]["depth"]
+        data["0"]["earthquake"]["hypocenter"]["depth"],
+        data["0"]["earthquake"]["domesticTsunami"]
     ]
 
-    var hypoLatLng = new L.LatLng(data[0]["earthquake"]["hypocenter"]["latitude"], data[0]["earthquake"]["hypocenter"]["longitude"]);
-    var hypoIconimage = L.icon({
+    console.log(time, hyponame)
+
+    let hypoLatLng = new L.LatLng(data[0]["earthquake"]["hypocenter"]["latitude"], data[0]["earthquake"]["hypocenter"]["longitude"]);
+    let hypoIconimage = L.icon({
         iconUrl: 'source/shingen.png',
         iconSize: [40,40],
         iconAnchor: [20, 20],
         popupAnchor: [0, -40]
     })
-    var hypoIcon = L.marker(hypoLatLng, {icon: hypoIconimage }).addTo(map);
+    let hypoIcon = L.marker(hypoLatLng, {icon: hypoIconimage }).addTo(map);
+
+    const scaleMap = {
+        "70": "7",
+        "60": "6強",
+        "55": "6弱",
+        "50": "5強",
+        "45": "5弱",
+        "40": "4",
+        "30": "3",
+        "20": "2",
+        "10": "1",
+        "-1": ""
+    };
+
+    const map_maxscale = scaleMap[maxscale];
+
+    updateEarthquakeParam(time, map_maxscale, hyponame);
 });
 
 
 const latest_maxscale = document.querySelector(".latest-card_maxscale");
 
-function updateMaxScale(scale) {
+function updateEarthquakeParam(time, scale, name) {
     
     const scaleClassMap = {
         "7": "seven-bg",
@@ -77,6 +97,8 @@ function updateMaxScale(scale) {
         txt.style.color = "#000";
         label.style.color = "#000";
     }
-}
 
-updateMaxScale("7");
+    document.getElementsByClassName("latest-card_location")[0].textContent = name;
+
+    const formatted_time = 
+}
