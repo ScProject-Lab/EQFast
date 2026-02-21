@@ -67,7 +67,7 @@ function updateData() {
 
         const map_maxscale = scaleMap[maxscale];
 
-        updateEarthquakeParam(time, map_maxscale, hyponame, magnitude, depth);
+        updateEarthquakeParam(time, map_maxscale, hyponame, magnitude, depth, tsunami);
         updateEqHistory()
     });
 
@@ -84,8 +84,8 @@ function updateData() {
         "不明": "null-bg"
     };
 
-    function updateEarthquakeParam(time, scale, name, magnitude, depth) {
-    const latest_maxscale = document.querySelector(".latest-card_maxscale");
+    function updateEarthquakeParam(time, scale, name, magnitude, depth, tsunami) {
+        const latest_maxscale = document.querySelector(".latest-card_maxscale");
 
         // 既存の震度色全消し
         Object.values(scaleClassMap).forEach(cls => {
@@ -153,8 +153,20 @@ function updateData() {
         }
 
         //津波
-        
+        const tsunamiCommentMap = {
+            "None": "津波の心配なし",
+            "Unknown": "不明",
+            "Checking": "調査中",
+            "NonEffective": "若干の海面変動",
+            "Watch": "津波注意報発表中",
+            "Warning": "津波予報等発表中",
+        };
+
+        const tsunamiComment = tsunamiCommentMap[tsunami];
+        const tsunami_class = document.getElementsByClassName("latest-card_tsunami")[0]
+        tsunami_class.textContent = tsunamiComment
     }
+
 
     function updateEqHistory () {
         const eqHistoryData = [
