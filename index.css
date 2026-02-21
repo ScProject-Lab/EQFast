@@ -5,5 +5,28 @@ html, body, #map {
 } 
 
 #map {
-    background: #080c13;
+    background: #151a25;
+    top: 0;
+    left: 250px;
+    width: calc(100% - 250px);
+    height: 100vh;
+    z-index: 0;
+}
+
+.side_panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 250px;
+    background-color: #0d0e13;
+    padding: 20px;
+    box-sizing: border-box;
+    z-index: 10;
+}
+
+.side_panel_title {
+    color: #fff;
+    font-size: 10px;
+    margin-bottom: 20px;
 }
