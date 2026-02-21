@@ -30,6 +30,45 @@ body {
     z-index: 10;
 }
 
+/* 背景色 */
+
+.seven-bg {
+    background-color: #4a0083;
+}
+
+.six-plus-bg {
+    background-color: #80142f;
+}
+
+.six-minus-bg {
+    background-color: #8f0d34;
+}
+
+.five-plus-bg {
+    background-color: #a11717;
+}
+
+.five-minus-bg {
+    background-color: #c22b2b;
+}
+
+.four-bg {
+    background-color: #c27b2b;
+}
+
+.three-bg {
+    background-color: #d1a11b;
+}
+
+.two-bg {
+    background-color: #008369;
+}
+
+.one-bg {
+    background-color: #007a9c;
+}
+
+
 .side-panel p, h2 {
     color: #fff;
 }
@@ -74,7 +113,6 @@ body {
 
 .latest-card_maxscale {
     margin: 12px 0;
-    background-color: #4a0083;
     padding: 6px;
     display: flex;
     justify-content: center;
@@ -85,8 +123,13 @@ body {
     box-shadow: 0 0 8px #00000080;
 }
 
+.scale_modifier {
+    font-size: 20px;
+}
+
 .latest-card_maxscale-label {
     font-size: 20px;
+    font-weight: 500;
 }
 
 .latest-card_maxscale-txt {
