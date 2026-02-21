@@ -68,6 +68,10 @@ body {
     background-color: #007a9c;
 }
 
+.null-bg {
+    background-color: #4a4a4a;
+}
+
 
 .latest-card_magnitude.investigate-text,
 .latest-card_depth.investigate-text {
@@ -198,7 +202,6 @@ body {
 .eq-history_maxscale {
     font-size: 36px;
     font-weight: 500;
-    background-color: #008369;
     text-align: center;
     width: 58px;
     height: 58px;
