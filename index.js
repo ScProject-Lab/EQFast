@@ -34,19 +34,3 @@ $.getJSON(" https://api.p2pquake.net/v2/history?codes=551", function (data) {
     })
     var hypoIcon = L.marker(hypoLatLng, {icon: hypoIconimage }).addTo(map);
 });
-
-// テストデータ
-const earthquake = {
-    maxShindo: 3,
-    location: "青森県東方沖",
-    magnitude: 5.0
-};
-
-document.getElementById("maxShindo").textContent =
-    "最大震度 " + earthquake.maxShindo;
-
-document.getElementById("location").textContent =
-    earthquake.location;
-
-document.getElementById("magnitude").textContent =
-    "M " + earthquake.magnitude.toFixed(1);

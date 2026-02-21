@@ -4,6 +4,11 @@ html, body, #map {
     margin: 0;
 } 
 
+body {
+    font-family: 'Jost', 'Noto Sans', sans-serif;
+    background-color: #0d0e13;
+}
+
 #map {
     background: #151a25;
     top: 0;
@@ -13,18 +18,162 @@ html, body, #map {
     z-index: 0;
 }
 
-.side_panel {
+.side-panel {
     position: fixed;
     top: 0;
     left: 0;
+    padding: 12px;
     height: 100vh;
     width: 250px;
     background-color: #0d0e13;
-    padding: 20px;
     box-sizing: border-box;
     z-index: 10;
 }
 
-.side_panel p, h2 {
+.side-panel p, h2 {
     color: #fff;
+}
+
+.latest-card {
+    background-color: #1f2737;
+    padding: 12px;
+    border-radius: 20px;
+}
+
+.latest-card p {
+    margin: 0;
+}
+
+.latest-card_title {
+    font-size: 13px;
+}
+
+.latest-card_tsunami {
+    font-size: 18px;
+    background-color: #4a0083;
+    text-align: center;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px #00000080;
+    margin: 12px 0;
+    font-weight: 500;
+}
+
+.latest-card_date {
+    font-size: 13px;
+}
+
+.latest-card_location {
+    font-size: 19px;
+    color: #ccc;
+}
+
+.latest-card_comment {
+    font-size: 13px;
+}
+
+.latest-card_maxscale {
+    margin: 12px 0;
+    background-color: #4a0083;
+    padding: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    justify-content: space-between;
+    padding: 0 24px;
+    box-shadow: 0 0 8px #00000080;
+}
+
+.latest-card_maxscale-label {
+    font-size: 20px;
+}
+
+.latest-card_maxscale-txt {
+    font-size: 45px;
+    font-weight: 500;
+}
+
+.latest-card_hypo-params {
+    background-color: #2a364c;
+    padding: 5px 12px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px #0000004b;
+}
+
+.latest-card_hypo-params_label {
+    font-size: 12px;
+}
+
+.latest-card_hypo-params_txt {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.latest-card_magnitude, .latest-card_depth {
+    font-size: 28px;
+    font-weight: 450;
+}
+
+.eq-history {
+    margin-top: 12px;
+    background-color: #1f2737;
+    padding: 12px;
+    border-radius: 20px;
+}
+
+.eq-history p {
+    margin: 0;
+}
+
+.eq-history_title {
+    font-size: 13px;
+}
+
+.eq-history_content {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+}
+
+.eq-history_maxscale {
+    font-size: 36px;
+    font-weight: 500;
+    background-color: #008369;
+    text-align: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.eq-history_elements {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.eq-history_date {
+    font-size: 11px;
+}
+
+.eq-history_param {
+    display: flex;
+    gap: 12px;
+}
+
+.eq-history_param_magnitude, .eq-history_param_depth {
+    font-size: 13px;
+}
+
+.eq-history_location {
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }
