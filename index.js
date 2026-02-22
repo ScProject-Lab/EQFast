@@ -6,13 +6,33 @@ var map = L.map('map', {
 }).setView([36.575, 137.984], 6);
 
 L.control.scale({ maxWidth: 150, position: 'bottomright', imperial: false }).addTo(map);
-map.zoomControl.setPosition('topright');
+map.zoomControl.setPosition('bottomleft');
+
+const resetViewControl = L.Control.extend({
+    options: { position: 'bottomleft' },
+    onAdd: function () {
+        const btn = L.DomUtil.create('a', 'leaflet-control-zoom-reset');
+        btn.innerHTML = '';
+        btn.title = '初期位置に戻る';
+        btn.href = '#';
+
+        L.DomEvent.on(btn, 'click', (e) => {
+            L.DomEvent.preventDefault(e);
+            map.setView([36.575, 137.984], 6);
+        });
+
+        return btn;
+    }
+});
+
 map.attributionControl.addAttribution(
     "<a href='https://www.jma.go.jp/jma/index.html' target='_blank'>気象庁</a>"
 );
 map.attributionControl.addAttribution(
     "<a href='https://github.com/mutsuyuki/Leaflet.SmoothWheelZoom' target='_blank'>SmoothWheelZoom</a>"
 );
+
+map.addControl(new resetViewControl());
 
 // ペインのzIndex設定（2つ目のコードより）
 map.createPane("pane_map1").style.zIndex = 1;
