@@ -1,3 +1,20 @@
+//=====
+// 設定
+const CONFIG = {
+    isTest: false,
+
+    get apiurl() {
+        return this.isTest
+        ? "./source/testNotoEq.json"
+        : "https://api.p2pquake.net/v2/history?codes=551&limit=15"
+    },
+
+    get updateInterval() {
+        return this.isTest ? 10000 : 2000;
+    }
+};
+//=====
+
 var map = L.map('map', {
     preferCanvas: true,
     scrollWheelZoom: false,
@@ -34,11 +51,10 @@ map.attributionControl.addAttribution(
 
 map.addControl(new resetViewControl());
 
-// ペインのzIndex設定（2つ目のコードより）
 map.createPane("pane_map1").style.zIndex = 1;
 map.createPane("pane_map2").style.zIndex = 2;
 map.createPane("pane_map3").style.zIndex = 3;
-map.createPane("pane_map_filled").style.zIndex = 5;  // 細分区域塗りつぶし
+map.createPane("pane_map_filled").style.zIndex = 5;
 map.createPane("shindo10").style.zIndex = 10;
 map.createPane("shindo20").style.zIndex = 20;
 map.createPane("shindo30").style.zIndex = 30;
@@ -55,6 +71,9 @@ map.createPane("tsunami_map").style.zIndex = 110;
 let shindoLayer = L.layerGroup().addTo(map);
 let shindoFilledLayer = L.layerGroup().addTo(map);
 let JMAPointsJson = null;
+let shindoCanvasLayer = null;
+let hypoMarker = null;
+let stationMap = {};
 let japan_data = null;
 let filled_list = {};
 
@@ -67,16 +86,16 @@ const PolygonLayer_Style = {
 };
 
 const shindoFillColorMap = {
-    10: "#007a9c",   // 震度1
-    20: "#008369",   // 震度2
-    30: "#ffe066",   // 震度3
-    40: "#c27b2b",   // 震度4
-    45: "#c22b2b",   // 震度5弱
-    46: "#db4921",   // 震度5弱以上
-    50: "#a11717",   // 震度5強
-    55: "#8f0d34",   // 震度6弱
-    60: "#80142f",   // 震度6強
-    70: "#4a0083",   // 震度7
+    10: "#007a9c",   // 1
+    20: "#008369",   // 2
+    30: "#d1a11b",   // 3
+    40: "#c27b2b",   // 4
+    45: "#c22b2b",   // 5弱
+    46: "#db4921",   // 5弱以上
+    50: "#a11717",   // 5強
+    55: "#8f0d34",   // 6弱
+    60: "#80142f",   // 6強
+    70: "#4a0083",   // 7
 };
 
 $.getJSON("source/saibun.geojson", function (data) {
@@ -85,12 +104,6 @@ $.getJSON("source/saibun.geojson", function (data) {
         pane: "pane_map3",
         style: PolygonLayer_Style
     }).addTo(map);
-});
-
-$.getJSON("source/JMAstations.json", function (data) {
-    JMAPointsJson = data;
-    updateData();
-    setInterval(updateData, 2000);
 });
 
 const scaleMap = {
@@ -119,9 +132,166 @@ const scaleClassMap = {
     "不明": "null-bg"
 };
 
+const iconCache = {};
+
+const iconNames = ["int1","int2","int3","int4","int50","int_","int55","int60","int65","int7"];
+
+function preloadIcons() {
+    return Promise.all(iconNames.map(name => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = `./source/point_icons/_${name}.png`;
+            img.onload = () => {
+                iconCache[name] = img;
+                resolve();
+            };
+        });
+    }));
+}
+
+const ShindoCanvasLayer = L.Layer.extend({
+
+    initialize: function() {
+        this._points = [];
+    },
+
+    onAdd: function(map) {
+        this._map = map;
+        this._canvas = L.DomUtil.create('canvas', 'shindo-canvas-layer');
+        this._canvas.style.position = 'absolute';
+        this._canvas.style.pointerEvents = 'none';
+        map.getPanes().overlayPane.appendChild(this._canvas);
+
+        map.on('moveend zoomend', this._reset, this);
+        map.on('zoom', this._redraw, this);
+        map.on('zoomanim', this._onZoomAnim, this);
+        this._reset();
+        return this;
+    },
+
+    onRemove: function(map) {
+        this._canvas.remove();
+        map.off('moveend zoomend', this._reset, this);
+        map.off('zoom', this._redraw, this);
+        map.off('zoomanim', this._onZoomAnim, this);
+    },
+
+    _onZoomAnim: function(e) {
+        const scale = this._map.getZoomScale(e.zoom, this._map.getZoom());
+        const origin = this._map._latLngToNewLayerPoint(
+            this._map.getBounds().getNorthWest(),
+            e.zoom,
+            e.center
+        );
+
+        L.DomUtil.setTransform(this._canvas, origin, scale);
+    },
+
+    onRemove: function(map) {
+        this._canvas.remove();
+        map.off('moveend zoomend', this._reset, this);
+    },
+
+    setPoints: function(points) {
+        this._points = points;
+        this._redraw();
+    },
+
+    _reset: function() {
+        const size = this._map.getSize();
+        this._canvas.width = size.x;
+        this._canvas.height = size.y;
+
+        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        L.DomUtil.setPosition(this._canvas, topLeft);
+
+        this._redraw();
+    },
+
+    _redraw: function() {
+        if (!this._map) return;
+        const ctx = this._canvas.getContext('2d');
+        const size = this._map.getSize();
+        ctx.clearRect(0, 0, size.x, size.y);
+
+        const iconSize = 20;
+        const half = iconSize / 2;
+
+        this._points.forEach(({ latlng, iconName }) => {
+            const img = iconCache[iconName];
+            if (!img) return;
+
+            const point = this._map.latLngToContainerPoint(latlng);
+
+            ctx.drawImage(img, point.x - half, point.y - half, iconSize, iconSize);
+        });
+    }
+});
+
+const iconMap = {
+    10: "int1",
+    20: "int2",
+    30: "int3",
+    40: "int4",
+    45: "int50",
+    46: "int_",
+    50: "int55",
+    55: "int60",
+    60: "int65",
+    70: "int7"
+};
+
+preloadIcons().then(() => {
+    shindoCanvasLayer = new ShindoCanvasLayer();
+    shindoCanvasLayer.addTo(map);
+
+    $.getJSON("source/JMAstations.json", function (data) {
+        JMAPointsJson = data;
+        data.forEach(p => { stationMap[p.name] = p; });
+        updateData();
+        setInterval(updateData, CONFIG.updateInterval);
+    });
+});
+
+function createShindoIcon(scale) {
+    const scaleText = scaleMap[String(scale)] || "?";
+    const fillColor = getShindoFillColor(scale);
+
+    const match = scaleText.match(/^(\d)([^\d]*)$/);
+    const number = match ? match[1] : scaleText;
+    const modifier = match ? match[2] : "";
+
+    const textColor = (number === "3" || number === "4") ? "#000" : "#fff";
+
+    const html = `
+        <div style="
+            width: 22px; height: 22px;
+            background: ${fillColor};
+            border: 2px solid #fff;
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 12px;
+            color: ${textColor};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            line-height: 1;
+        ">
+            ${number}<span style="font-size:8px">${modifier}</span>
+        </div>
+    `;
+
+    return L.divIcon({
+        html: html,
+        className: "",
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -15]
+    });
+}
+
 function updateData() {
-    $.getJSON("https://api.p2pquake.net/v2/history?codes=551", (data) => {
-        const latest = data[0];
+    $.getJSON(CONFIG.apiurl, (data) => {
+        const detailScaleData = data.filter(eq => eq.issue.type === "DetailScale");
+        const latest = detailScaleData[0];
 
         const { time, hypocenter, maxScale, domesticTsunami } = latest.earthquake;
         const { name: hyponame, magnitude, depth, latitude, longitude } = hypocenter;
@@ -140,71 +310,62 @@ function updateData() {
         drawShindoPoints(latest.points);
 
         updateEarthquakeParam(time, map_maxscale, hyponame, magnitude, depth, domesticTsunami);
-        updateEqHistory(data.filter(eq => eq.issue.type === "DetailScale"));
+
+        const eqMap = new Map();
+        detailScaleData.forEach(eq => {
+            const key = `${eq.earthquake.time}_${eq.earthquake.hypocenter.name}`;
+            const existing = eqMap.get(key);
+            if (!existing || eq.created_at > existing.created_at) {
+                eqMap.set(key, eq);
+            }
+        });
+
+        const deduped = Array.from(eqMap.values())
+            .sort((a, b) => b.earthquake.time.localeCompare(a.earthquake.time));
+
+        const latestKey = `${latest.earthquake.time}_${latest.earthquake.hypocenter.name}`;
+        const historyData = deduped.filter(eq => {
+            const key = `${eq.earthquake.time}_${eq.earthquake.hypocenter.name}`;
+            return key !== latestKey;
+        });
+
+        updateEqHistory(historyData);
     });
 }
 
 function drawShindoPoints(points) {
-    if (!JMAPointsJson || !japan_data) return;
+    if (!JMAPointsJson || !japan_data || !shindoCanvasLayer) return;
 
-    shindoLayer.clearLayers();
-    shindoFilledLayer.clearLayers();
+    const canvasPoints = [];
     filled_list = {};
 
     points.forEach(element => {
-        const station = JMAPointsJson.find(p => p.name === element.addr);
+        const station = stationMap[element.addr];
         if (!station) return;
 
         const scale = element.scale;
-
-        const iconMap = {
-            10: "int1",
-            20: "int2",
-            30: "int3",
-            40: "int4",
-            45: "int50",
-            46: "int_",
-            50: "int55",
-            55: "int60",
-            60: "int65",
-            70: "int7"
-        };
         const iconName = iconMap[scale] || "int_";
-        const iconUrl = `./source/point_icons/_${iconName}.png`;
 
-        const icon = L.icon({
-            iconUrl: iconUrl,
-            iconSize: [20, 20],
-            popupAnchor: [0, -15]
+        canvasPoints.push({
+            latlng: L.latLng(Number(station.lat), Number(station.lon)),
+            iconName: iconName,
+            scale: scale
         });
 
-        const latlng = [Number(station.lat), Number(station.lon)];
-        const pane = `shindo${scale}`;
-
-        const marker = L.marker(latlng, {
-            icon: icon,
-            pane: map.getPane(pane) ? pane : undefined
-        });
-
-        const scaleText = scaleMap[String(scale)] || "不明";
-        marker.on('mouseover', function () { this.openPopup(); });
-        marker.on('mouseout', function () { this.closePopup(); });
-
-        shindoLayer.addLayer(marker);
-
-        if (station.area && station.area.name) {
+        if (station.area?.name) {
             const areaCode = AreaNameToCode(station.area.name);
-            if (areaCode !== undefined && areaCode !== null) {
-                if (!filled_list[areaCode] || filled_list[areaCode] < scale) {
-                    filled_list[areaCode] = scale;
-                }
+            if (areaCode != null && (!filled_list[areaCode] || filled_list[areaCode] < scale)) {
+                filled_list[areaCode] = scale;
             }
         }
     });
 
+    canvasPoints.sort((a, b) => a.scale - b.scale);
+
+    shindoCanvasLayer.setPoints(canvasPoints);
+
     for (const areaCode in filled_list) {
-        const fillColor = getShindoFillColor(filled_list[areaCode]);
-        FillPolygon(areaCode, fillColor);
+        FillPolygon(areaCode, getShindoFillColor(filled_list[areaCode]));
     }
 }
 
@@ -212,7 +373,6 @@ function getShindoFillColor(scale) {
     return shindoFillColorMap[scale] || "#888888";
 }
 
-// 細分区域ポリゴン塗りつぶし
 function FillPolygon(area_Code, fillColor) {
     if (!japan_data) return;
 
@@ -239,7 +399,6 @@ function FillPolygon(area_Code, fillColor) {
     shindoFilledLayer.addLayer(filledLayer);
 }
 
-// エリア名とコード変換
 function AreaNameToCode(Name) {
     const array_Num = AreaName.indexOf(Name);
     return AreaCode[array_Num];
@@ -249,9 +408,6 @@ function AreaCodeToName(code) {
     return AreaName[array_Num];
 }
 
-// 震源マーカーの更新
-let hypoMarker = null;
-
 function updateMarker(hypoLatLng, hypoIconImage) {
     if (!hypoMarker) {
         hypoMarker = L.marker(hypoLatLng, { icon: hypoIconImage, pane: "shingen" }).addTo(map);
@@ -260,7 +416,6 @@ function updateMarker(hypoLatLng, hypoIconImage) {
     }
 }
 
-// 地震パラメータUI更新
 function updateEarthquakeParam(time, scale, name, magnitude, depth, tsunami) {
     const latest_maxscale = document.querySelector(".latest-card_maxscale");
 
@@ -345,8 +500,7 @@ function updateEqHistory(eqData) {
     const container = document.getElementById("eq-history-list");
     container.innerHTML = "";
 
-    eqData.forEach((eq, index) => {
-        if (index === 0) return;
+    eqData.forEach((eq) => {
 
         const { time, maxScale, hypocenter } = eq.earthquake;
         const { name, magnitude, depth } = hypocenter;
@@ -393,7 +547,6 @@ function updateEqHistory(eqData) {
     });
 }
 
-// ドラッグスクロール
 function enableDragScroll(element, options = {}) {
     let isDown = false;
     let startX, startY, scrollLeft, scrollTop;

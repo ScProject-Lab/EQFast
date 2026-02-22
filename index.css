@@ -78,6 +78,24 @@ body {
 }
 
 
+.tsunami-none,
+.tsunami-un,
+.tsunami-check {
+    background-color: #3e506d !important;
+}
+
+.tsunami-effect {
+    background-color: #007a9b !important;
+}
+
+.tsunami-watch {
+    background-color: #e2b63e !important;
+}
+
+.tsunami-warn {
+    background-color: #a11717 !important;
+}
+
 .latest-card_magnitude.investigate-text,
 .latest-card_depth.investigate-text {
     font-size: 20px;
