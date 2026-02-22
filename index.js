@@ -150,7 +150,7 @@ function drawShindoPoints(points) {
             70: "int7"
         };
         const iconName = iconMap[scale] || "int_";
-        const iconUrl = `source/point_icons/_${iconName}.png`;
+        const iconUrl = `./source/point_icons/_${iconName}.png`;
 
         const icon = L.icon({
             iconUrl: iconUrl,
