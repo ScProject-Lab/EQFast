@@ -57,7 +57,7 @@ body {
 }
 
 .three-bg {
-    background-color: #d1a11b;
+    background-color: #e2b63e;
 }
 
 .two-bg {
@@ -210,6 +210,14 @@ body {
     justify-content: center;
     align-items: center;
     flex-shrink: 0;
+}
+
+.eq-history_maxscale p {
+    color: #fff;
+}
+
+.eq-history_maxscale.dark-text p {
+    color: #000;
 }
 
 .eq-history_elements {
