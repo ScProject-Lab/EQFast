@@ -340,3 +340,21 @@ body {
 .leaflet-control-attribution a:hover {
     color: #ffffff !important;
 }
+
+.feedback-button {
+    width: 200px;
+    height: 30px;
+    margin: 11px auto 0;
+    color: #aaaaaa;
+    font-weight: 500;
+    font-size: 14px;
+    background-color: #1f2738;
+    border-radius: 10px;
+    box-shadow: 0 0 4px #00000080;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 1000;
+    text-decoration: none;
+}
