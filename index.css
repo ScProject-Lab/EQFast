@@ -33,6 +33,7 @@ body {
     z-index: 10;
     overflow-y: auto;
     overflow-x: hidden;
+    cursor: grab;
 }
 
 .seven-bg {

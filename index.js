@@ -315,7 +315,6 @@ function updateEarthquakeParam(time, scale, name, magnitude, depth, tsunami) {
     };
 
     const tsunami_class = document.getElementsByClassName("latest-card_tsunami")[0];
-    // tsunamiクラスリセット
     Object.values(tsunamiClassMap).forEach(cls => tsunami_class.classList.remove(cls));
     tsunami_class.textContent = tsunamiCommentMap[tsunami] || "情報なし";
     if (tsunamiClassMap[tsunami]) tsunami_class.classList.add(tsunamiClassMap[tsunami]);
@@ -335,12 +334,10 @@ function updateEqHistory(eqData) {
         const scaleText = scaleMap[String(maxScale)] || "不明";
         const bgClass = scaleClassMap[scaleText] || "";
 
-        // 数字と修飾子に分割
         const match = scaleText.match(/^(\d)([^\d]*)$/);
         const scaleNumber = match ? match[1] : scaleText;
         const scaleModifier = match ? match[2] : "";
 
-        // 時刻フォーマット
         const date = new Date(time);
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
@@ -348,13 +345,11 @@ function updateEqHistory(eqData) {
         const minutes = String(date.getMinutes()).padStart(2, "0");
         const formatted_time = `${month}/${day} ${hours}:${minutes}ごろ`;
 
-        // 深さ
         const num_depth = Number(depth);
         const depthText = num_depth === -1 ? "調査中"
                         : num_depth === 0  ? "ごく浅い"
                         : `${num_depth}km`;
 
-        // マグニチュード
         const magText = Number(magnitude) === -1 ? "調査中" : `M ${magnitude.toFixed(1)}`;
 
         const darkTextClass = (scaleNumber === "3" || scaleNumber === "4") ? "dark-text" : "";
@@ -374,6 +369,49 @@ function updateEqHistory(eqData) {
                     </div>
                 </div>
             `;
-            container.insertAdjacentHTML("beforeend", html);
-        });
+        container.insertAdjacentHTML("beforeend", html);
+    });
 }
+
+// ドラッグスクロール
+function enableDragScroll(element, options = {}) {
+    let isDown = false;
+    let startX, startY, scrollLeft, scrollTop;
+    const speed = options.speed || 1;
+
+    element.style.cursor = 'grab';
+
+    element.addEventListener('mousedown', (e) => {
+        isDown = true;
+        element.classList.add('active');
+        element.style.cursor = 'grabbing';
+        startX = e.pageX - element.offsetLeft;
+        startY = e.pageY - element.offsetTop;
+        scrollLeft = element.scrollLeft;
+        scrollTop = element.scrollTop;
+    });
+
+    element.addEventListener('mouseup', () => {
+        isDown = false;
+        element.classList.remove('active');
+        element.style.cursor = 'grab';
+    });
+
+    element.addEventListener('mouseleave', () => {
+        isDown = false;
+        element.classList.remove('active');
+        element.style.cursor = 'grab';
+    });
+
+    element.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - element.offsetLeft;
+        const y = e.pageY - element.offsetTop;
+        element.scrollLeft = scrollLeft - (x - startX) * speed;
+        element.scrollTop  = scrollTop  - (y - startY) * speed;
+    });
+}
+
+const scrollable = document.querySelector('.side-panel');
+enableDragScroll(scrollable, { speed: 1 });
