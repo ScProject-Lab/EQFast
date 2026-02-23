@@ -1,7 +1,7 @@
 //=====
 // 設定
 const CONFIG = {
-    isTest: false,
+    isTest: new URLSearchParams(window.location.search).has("test"),
 
     get apiurl() {
         return this.isTest
@@ -15,8 +15,23 @@ const CONFIG = {
 };
 //=====
 
+// テスト/本番切り替えボタン
+const toggleBtn = document.createElement('a');
+toggleBtn.className = 'feedback-button';
+toggleBtn.target = '_self';
+
+if (CONFIG.isTest) {
+    toggleBtn.href = window.location.pathname;  // ?testなしのURL（本番）
+    toggleBtn.textContent = 'テストモードを終了';
+} else {
+    toggleBtn.href = window.location.pathname + '?test';  // ?test付きのURL
+    toggleBtn.textContent = 'テストモード';
+}
+
+document.querySelector('.side-panel').appendChild(toggleBtn);
+
+// map
 var map = L.map('map', {
-    preferCanvas: true,
     scrollWheelZoom: false,
     smoothWheelZoom: true,
     smoothSensitivity: 1.5,
@@ -151,68 +166,52 @@ function preloadIcons() {
 
 const ShindoCanvasLayer = L.Layer.extend({
 
-    initialize: function() {
+    initialize: function () {
         this._points = [];
     },
 
-    onAdd: function(map) {
+    onAdd: function (map) {
         this._map = map;
+
         this._canvas = L.DomUtil.create('canvas', 'shindo-canvas-layer');
         this._canvas.style.position = 'absolute';
+        this._canvas.style.top = '0';
+        this._canvas.style.left = '0';
         this._canvas.style.pointerEvents = 'none';
-        map.getPanes().overlayPane.appendChild(this._canvas);
+        this._canvas.style.zIndex = 400;
 
-        map.on('moveend zoomend', this._reset, this);
-        map.on('zoom', this._redraw, this);
-        map.on('zoomanim', this._onZoomAnim, this);
-        this._reset();
+        map.getContainer().appendChild(this._canvas);
+
+        map.on('move zoom viewreset zoomend moveend', this._redraw, this);
+        map.on('resize', this._resize, this);
+
+        this._resize();
         return this;
     },
 
-    onRemove: function(map) {
+    onRemove: function (map) {
         this._canvas.remove();
-        map.off('moveend zoomend', this._reset, this);
-        map.off('zoom', this._redraw, this);
-        map.off('zoomanim', this._onZoomAnim, this);
+        map.off('move zoom viewreset zoomend moveend', this._redraw, this);
+        map.off('resize', this._resize, this);
     },
 
-    _onZoomAnim: function(e) {
-        const scale = this._map.getZoomScale(e.zoom, this._map.getZoom());
-        const origin = this._map._latLngToNewLayerPoint(
-            this._map.getBounds().getNorthWest(),
-            e.zoom,
-            e.center
-        );
-
-        L.DomUtil.setTransform(this._canvas, origin, scale);
-    },
-
-    onRemove: function(map) {
-        this._canvas.remove();
-        map.off('moveend zoomend', this._reset, this);
-    },
-
-    setPoints: function(points) {
+    setPoints: function (points) {
         this._points = points;
         this._redraw();
     },
 
-    _reset: function() {
+    _resize: function () {
         const size = this._map.getSize();
         this._canvas.width = size.x;
         this._canvas.height = size.y;
-
-        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        L.DomUtil.setPosition(this._canvas, topLeft);
-
         this._redraw();
     },
 
-    _redraw: function() {
+    _redraw: function () {
         if (!this._map) return;
+
         const ctx = this._canvas.getContext('2d');
-        const size = this._map.getSize();
-        ctx.clearRect(0, 0, size.x, size.y);
+        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
         const iconSize = 20;
         const half = iconSize / 2;
@@ -221,9 +220,8 @@ const ShindoCanvasLayer = L.Layer.extend({
             const img = iconCache[iconName];
             if (!img) return;
 
-            const point = this._map.latLngToContainerPoint(latlng);
-
-            ctx.drawImage(img, point.x - half, point.y - half, iconSize, iconSize);
+            const pt = this._map.latLngToContainerPoint(latlng);
+            ctx.drawImage(img, pt.x - half, pt.y - half, iconSize, iconSize);
         });
     }
 });
@@ -338,6 +336,7 @@ function drawShindoPoints(points) {
 
     const canvasPoints = [];
     filled_list = {};
+    shindoFilledLayer.clearLayers()
 
     points.forEach(element => {
         const station = stationMap[element.addr];

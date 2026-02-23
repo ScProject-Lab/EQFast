@@ -6,19 +6,19 @@ html, body {
     width: 100%;
     height: 100%;
     margin: 0;
-    overflow: hidden;
 }
 
 body {
     font-family: 'Jost', 'Noto Sans', sans-serif;
     background-color: #0d0e13;
     display: flex;
+    overflow: hidden;
 }
 
 #map {
     background: #151a25;
     flex: 1;
-    height: 100vh;
+    height: 100%;
     z-index: 0;
 }
 
@@ -368,7 +368,7 @@ body {
     font-size: 14px;
     background-color: #1f2738;
     border-radius: 10px;
-    box-shadow: 0 0 4px #00000080;
+    box-shadow: none;
     display: flex;
     justify-content: center;
     align-items: center;
