@@ -251,6 +251,33 @@ preloadIcons().then(() => {
     });
 });
 
+const sidePanel = document.querySelector('.side-panel');
+let isDown = false;
+let startY;
+let scrollTop;
+
+sidePanel.addEventListener('mousedown', (e) => {
+    isDown = true;
+    startY = e.pageY - sidePanel.offsetTop;
+    scrollTop = sidePanel.scrollTop;
+    sidePanel.style.cursor = 'grabbing';
+    sidePanel.style.userSelect = 'none';
+});
+
+document.addEventListener('mouseup', () => {
+    isDown = false;
+    sidePanel.style.cursor = 'grab';
+    sidePanel.style.userSelect = '';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const y = e.pageY - sidePanel.offsetTop;
+    const walk = y - startY;
+    sidePanel.scrollTop = scrollTop - walk;
+});
+
 function createShindoIcon(scale) {
     const scaleText = scaleMap[String(scale)] || "?";
     const fillColor = getShindoFillColor(scale);
