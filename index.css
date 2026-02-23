@@ -26,15 +26,15 @@ body {
     position: relative;
     flex-shrink: 0;
     padding: 12px;
-    height: 100vh;
+    height: 100dvh;
     width: 250px;
     background-color: #0d0e13;
     box-sizing: border-box;
     z-index: 10;
     overflow-y: auto;
     overflow-x: hidden;
-    cursor: grab;
-    user-select: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .seven-bg {
