@@ -628,65 +628,39 @@ enableDragScroll(scrollable, { speed: 1 });
 // 読み上げ機能
 //=====
 
-//=====
-// 読み上げ機能
-//=====
-
 const SpeechConfig = {
     enabled: true,
     minScale: 0,
-    speakerId: 2,
-    voicevoxUrl: 'http://localhost:50021',
+    lang: 'ja-JP',
+    rate: 1.5,
+    pitch: 1.0,
 };
 
 let lastSpokenKey = null;
 let speechCooldown = false;
-let currentAudio = null;
 let userInteracted = false;
 
-async function speak(text) {
-    if (!SpeechConfig.enabled) return;
+function speak(text) {
+    if (!SpeechConfig.enabled || !userInteracted) return;
+    if (!window.speechSynthesis) return;
 
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang  = SpeechConfig.lang;
+    utter.rate  = SpeechConfig.rate;
+    utter.pitch = SpeechConfig.pitch;
+
+    if (CONFIG.isTest) {
+        utter.onend = () => {
+            setTimeout(() => {
+                lastSpokenKey = null;
+                speechCooldown = false;
+            }, 5000);
+        };
+        speechCooldown = true;
     }
 
-    try {
-        const queryRes = await fetch(
-            `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
-            { method: 'POST' }
-        );
-        if (!queryRes.ok) throw new Error(`audio_query failed: ${queryRes.status}`);
-
-        const synthRes = await fetch(
-            `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(await queryRes.json())
-            }
-        );
-        if (!synthRes.ok) throw new Error(`synthesis failed: ${synthRes.status}`);
-
-        const blob = await synthRes.blob();
-        currentAudio = new Audio(URL.createObjectURL(blob));
-
-        if (CONFIG.isTest) {
-            currentAudio.onended = () => {
-                setTimeout(() => {
-                    lastSpokenKey = null;
-                    speechCooldown = false;
-                }, 5000);
-            };
-            speechCooldown = true;
-        }
-
-        currentAudio.play();
-
-    } catch (e) {
-        console.error('VOICEVOX読み上げエラー:', e);
-    }
+    window.speechSynthesis.speak(utter);
 }
 
 function buildSpeechText(time, scale, name, magnitude, depth, tsunami) {
@@ -696,7 +670,7 @@ function buildSpeechText(time, scale, name, magnitude, depth, tsunami) {
     const hours   = String(d.getHours()).padStart(2, "0");
     const minutes = String(d.getMinutes()).padStart(2, "0");
 
-    const magText   = Number(magnitude) === -1
+    const magText = Number(magnitude) === -1
         ? "不明"
         : `${magnitude.toFixed(1)}`;
 
@@ -726,55 +700,6 @@ function buildSpeechText(time, scale, name, magnitude, depth, tsunami) {
     ].join("");
 }
 
-let pendingAudio = null; // 合成中のPromise
-
-async function preloadSpeech(text) {
-    try {
-        const queryRes = await fetch(
-            `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
-            { method: 'POST' }
-        );
-        const synthRes = await fetch(
-            `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(await queryRes.json())
-            }
-        );
-        return new Audio(URL.createObjectURL(await synthRes.blob()));
-    } catch (e) {
-        console.error('VOICEVOX preload error:', e);
-        return null;
-    }
-}
-
-async function speak(text) {
-    if (!SpeechConfig.enabled || !userInteracted) return;
-
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
-
-    const audio = await pendingAudio;
-    if (!audio) return;
-
-    currentAudio = audio;
-
-    if (CONFIG.isTest) {
-        currentAudio.onended = () => {
-            setTimeout(() => {
-                lastSpokenKey = null;
-                speechCooldown = false;
-            }, 5000);
-        };
-        speechCooldown = true;
-    }
-
-    currentAudio.play();
-}
-
 function trySpeakEarthquake({ time, scale, name, magnitude, depth, tsunami, rawScale }) {
     if (speechCooldown) return;
     const key = `${time}_${name}`;
@@ -783,9 +708,6 @@ function trySpeakEarthquake({ time, scale, name, magnitude, depth, tsunami, rawS
 
     lastSpokenKey = key;
     const text = buildSpeechText(time, scale, name, magnitude, depth, tsunami);
-
-    pendingAudio = preloadSpeech(text);
-
     speak(text);
 }
 
@@ -797,7 +719,6 @@ function trySpeakEarthquake({ time, scale, name, magnitude, depth, tsunami, rawS
     const dot         = document.getElementById('voice-status-dot');
     const statusTxt   = document.getElementById('voice-status-text');
 
-    // index.js の SpeechConfig が定義されてから初期値を反映
     function waitAndSync() {
         if (typeof SpeechConfig !== 'undefined') {
             toggle.checked    = SpeechConfig.enabled;
@@ -809,72 +730,40 @@ function trySpeakEarthquake({ time, scale, name, magnitude, depth, tsunami, rawS
     }
     waitAndSync();
 
-    // ON/OFF トグル
     toggle.addEventListener('change', () => {
         SpeechConfig.enabled = toggle.checked;
         detail.classList.toggle('visible', toggle.checked);
-        if (toggle.checked) {
-            userInteracted = true;
-            checkConnection();
-        }
+        if (toggle.checked) userInteracted = true;
     });
 
-    // 最小震度変更
     minScaleSel.addEventListener('change', () => {
         SpeechConfig.minScale = Number(minScaleSel.value);
     });
 
-    // VOICEVOX 疎通確認
-    async function checkConnection() {
-        dot.className = 'voice-status-dot busy';
-        statusTxt.textContent = '確認中…';
-        try {
-            const res = await fetch(`${SpeechConfig.voicevoxUrl}/version`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(3000)
-            });
-            if (!res.ok) throw new Error();
-            dot.className = 'voice-status-dot ok';
-            statusTxt.textContent = '接続OK';
-        } catch {
-            dot.className = 'voice-status-dot err';
-            statusTxt.textContent = '接続できません';
-        }
-    }
-
-    // テスト再生
-    testBtn.addEventListener('click', async () => {
+    testBtn.addEventListener('click', () => {
         userInteracted = true;
         testBtn.disabled = true;
         testBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg> 再生中…`;
         dot.className = 'voice-status-dot busy';
-        statusTxt.textContent = '合成中…';
+        statusTxt.textContent = '再生中…';
 
-        const text = '読み上げは有効です。';
-        try {
-            const qRes = await fetch(
-                `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
-                { method: 'POST', signal: AbortSignal.timeout(5000) }
-            );
-            const sRes = await fetch(
-                `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(await qRes.json()),
-                    signal: AbortSignal.timeout(5000)
-                }
-            );
-            const audio = new Audio(URL.createObjectURL(await sRes.blob()));
-            audio.play();
+        const utter = new SpeechSynthesisUtterance('読み上げは有効です。');
+        utter.lang  = SpeechConfig.lang;
+        utter.rate  = SpeechConfig.rate;
+        utter.pitch = SpeechConfig.pitch;
+        utter.onend = () => {
             dot.className = 'voice-status-dot ok';
-            statusTxt.textContent = '接続OK';
-        } catch {
-            dot.className = 'voice-status-dot err';
-            statusTxt.textContent = '接続できません';
-        } finally {
+            statusTxt.textContent = '正常';
             testBtn.disabled = false;
             testBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg> テスト再生`;
-        }
+        };
+        utter.onerror = () => {
+            dot.className = 'voice-status-dot err';
+            statusTxt.textContent = 'エラー';
+            testBtn.disabled = false;
+            testBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg> テスト再生`;
+        };
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utter);
     });
 })();
