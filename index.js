@@ -632,7 +632,7 @@ const SpeechConfig = {
     enabled: true,
     minScale: 0,
     lang: 'ja-JP',
-    rate: 1.5,
+    rate: 1.0,
     pitch: 1.0,
 };
 
