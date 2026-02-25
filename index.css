@@ -90,6 +90,7 @@ body {
 
 .tsunami-watch {
     background-color: #e2b63e !important;
+    color: #000;
 }
 
 .tsunami-warn {
@@ -375,4 +376,204 @@ body {
     cursor: pointer;
     z-index: 1000;
     text-decoration: none;
+}
+
+/* 音声設定 */
+
+.voice-settings {
+    margin-top: 12px;
+    background-color: #1f2737;
+    padding: 12px;
+    border-radius: 20px;
+}
+
+.voice-settings p {
+    margin: 0;
+}
+
+.voice-settings_title {
+    font-size: 13px;
+    color: #fff;
+}
+
+.voice-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.voice-toggle-label {
+    font-size: 13px;
+    color: #fff;
+}
+
+
+/* トグルスイッチ */
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #2a364c;
+    border-radius: 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    top: 3px;
+    background: #aaaaaa;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+    background: #fff;
+}
+
+
+/* 詳細設定（トグルON時のみ展開） */
+.voice-detail {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+.voice-detail.visible {
+    max-height: 200px;
+    opacity: 1;
+}
+
+.voice-divider {
+    height: 1px;
+    background-color: #2a364c;
+    margin: 10px 0;
+}
+
+.voice-param-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.voice-param-row + .voice-param-row {
+    margin-top: 8px;
+}
+
+.voice-param-label {
+    font-size: 12px;
+    color: #aaaaaa;
+    white-space: nowrap;
+}
+
+.voice-select {
+    background-color: #2a364c;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: 'Jost', 'Noto Sans', sans-serif;
+    font-size: 12px;
+    padding: 6px 28px 6px 8px;
+    cursor: pointer;
+    outline: none;
+    box-shadow: 0 0 8px #0000004b;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23aaaaaa'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 16px 16px;
+}
+
+.voice-select option {
+    background-color: #1f2737;
+}
+
+.voice-test-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #2a364c;
+    border: none;
+    border-radius: 8px;
+    color: #aaaaaa;
+    font-family: 'Jost', 'Noto Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0000004b;
+    transition: color 0.15s, background-color 0.15s;
+    white-space: nowrap;
+}
+
+.voice-test-btn:hover {
+    background-color: #3a3f4b;
+    color: #ffffff;
+}
+
+.voice-test-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.voice-test-btn svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.voice-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.voice-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #2a364c;
+    flex-shrink: 0;
+    transition: background-color 0.3s;
+}
+
+.voice-status-dot.ok   { background-color: #008369; }
+.voice-status-dot.err  { background-color: #a11717; }
+.voice-status-dot.busy {
+    background-color: #e2b63e;
+    animation: voice-dot-pulse 1s infinite;
+}
+
+@keyframes voice-dot-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+.voice-status-text {
+    font-size: 11px;
+    color: #aaaaaa;
 }

@@ -335,6 +335,15 @@ function updateData() {
         drawShindoPoints(latest.points);
 
         updateEarthquakeParam(time, map_maxscale, hyponame, magnitude, depth, domesticTsunami);
+        trySpeakEarthquake({
+            time,
+            scale:    map_maxscale,
+            name:     hyponame,
+            magnitude,
+            depth,
+            tsunami:  domesticTsunami,
+            rawScale: maxScale,
+        });
 
         const eqMap = new Map();
         detailScaleData.forEach(eq => {
@@ -614,3 +623,258 @@ function enableDragScroll(element, options = {}) {
 
 const scrollable = document.querySelector('.side-panel');
 enableDragScroll(scrollable, { speed: 1 });
+
+//=====
+// 読み上げ機能
+//=====
+
+//=====
+// 読み上げ機能
+//=====
+
+const SpeechConfig = {
+    enabled: true,
+    minScale: 0,
+    speakerId: 2,
+    voicevoxUrl: 'http://localhost:50021',
+};
+
+let lastSpokenKey = null;
+let speechCooldown = false;
+let currentAudio = null;
+let userInteracted = false;
+
+async function speak(text) {
+    if (!SpeechConfig.enabled) return;
+
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+
+    try {
+        const queryRes = await fetch(
+            `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
+            { method: 'POST' }
+        );
+        if (!queryRes.ok) throw new Error(`audio_query failed: ${queryRes.status}`);
+
+        const synthRes = await fetch(
+            `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(await queryRes.json())
+            }
+        );
+        if (!synthRes.ok) throw new Error(`synthesis failed: ${synthRes.status}`);
+
+        const blob = await synthRes.blob();
+        currentAudio = new Audio(URL.createObjectURL(blob));
+
+        if (CONFIG.isTest) {
+            currentAudio.onended = () => {
+                setTimeout(() => {
+                    lastSpokenKey = null;
+                    speechCooldown = false;
+                }, 5000);
+            };
+            speechCooldown = true;
+        }
+
+        currentAudio.play();
+
+    } catch (e) {
+        console.error('VOICEVOX読み上げエラー:', e);
+    }
+}
+
+function buildSpeechText(time, scale, name, magnitude, depth, tsunami) {
+    const d = new Date(time);
+    const month   = d.getMonth() + 1;
+    const day     = d.getDate();
+    const hours   = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+
+    const magText   = Number(magnitude) === -1
+        ? "不明"
+        : `${magnitude.toFixed(1)}`;
+
+    const depthNum  = Number(depth);
+    const depthText = depthNum === -1 ? "不明"
+                    : depthNum === 0  ? "ごく浅い"
+                    : `${depthNum}キロメートル`;
+
+    const tsunamiVoiceMap = {
+        "None":        "この地震による津波の心配はありません。",
+        "Unknown":     "現在、津波に関する情報を調査中です。",
+        "Checking":    "現在、津波に関する情報を調査中です。",
+        "NonEffective":"若干の海面変動があるかもしれませんが、被害の心配はありません。",
+        "Watch":       "この地震によって、津波注意報が発表されています。",
+        "Warning":     "この地震によって、津波予報等を発表中です。",
+    };
+    const tsunamiText = tsunamiVoiceMap[tsunami] ?? "津波情報は不明です。";
+
+    return [
+        `地震情報。`,
+        `${month}月${day}日 ${hours}時${minutes}分ごろ、`,
+        `${name}で地震がありました。`,
+        `最大震度は${scale}、`,
+        `震源の深さは${depthText}。`,
+        `地震の規模を示すマグニチュードは、${magText} 、と推定されています。`,
+        `また、${tsunamiText}`,
+    ].join("");
+}
+
+let pendingAudio = null; // 合成中のPromise
+
+async function preloadSpeech(text) {
+    try {
+        const queryRes = await fetch(
+            `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
+            { method: 'POST' }
+        );
+        const synthRes = await fetch(
+            `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(await queryRes.json())
+            }
+        );
+        return new Audio(URL.createObjectURL(await synthRes.blob()));
+    } catch (e) {
+        console.error('VOICEVOX preload error:', e);
+        return null;
+    }
+}
+
+async function speak(text) {
+    if (!SpeechConfig.enabled || !userInteracted) return;
+
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+
+    const audio = await pendingAudio;
+    if (!audio) return;
+
+    currentAudio = audio;
+
+    if (CONFIG.isTest) {
+        currentAudio.onended = () => {
+            setTimeout(() => {
+                lastSpokenKey = null;
+                speechCooldown = false;
+            }, 5000);
+        };
+        speechCooldown = true;
+    }
+
+    currentAudio.play();
+}
+
+function trySpeakEarthquake({ time, scale, name, magnitude, depth, tsunami, rawScale }) {
+    if (speechCooldown) return;
+    const key = `${time}_${name}`;
+    if (key === lastSpokenKey) return;
+    if (Number(rawScale) < SpeechConfig.minScale) return;
+
+    lastSpokenKey = key;
+    const text = buildSpeechText(time, scale, name, magnitude, depth, tsunami);
+
+    pendingAudio = preloadSpeech(text);
+
+    speak(text);
+}
+
+(function () {
+    const toggle      = document.getElementById('voice-enabled-toggle');
+    const detail      = document.getElementById('voice-detail');
+    const minScaleSel = document.getElementById('voice-min-scale');
+    const testBtn     = document.getElementById('voice-test-btn');
+    const dot         = document.getElementById('voice-status-dot');
+    const statusTxt   = document.getElementById('voice-status-text');
+
+    // index.js の SpeechConfig が定義されてから初期値を反映
+    function waitAndSync() {
+        if (typeof SpeechConfig !== 'undefined') {
+            toggle.checked    = SpeechConfig.enabled;
+            minScaleSel.value = String(SpeechConfig.minScale);
+            detail.classList.toggle('visible', SpeechConfig.enabled);
+        } else {
+            setTimeout(waitAndSync, 100);
+        }
+    }
+    waitAndSync();
+
+    // ON/OFF トグル
+    toggle.addEventListener('change', () => {
+        SpeechConfig.enabled = toggle.checked;
+        detail.classList.toggle('visible', toggle.checked);
+        if (toggle.checked) {
+            userInteracted = true;
+            checkConnection();
+        }
+    });
+
+    // 最小震度変更
+    minScaleSel.addEventListener('change', () => {
+        SpeechConfig.minScale = Number(minScaleSel.value);
+    });
+
+    // VOICEVOX 疎通確認
+    async function checkConnection() {
+        dot.className = 'voice-status-dot busy';
+        statusTxt.textContent = '確認中…';
+        try {
+            const res = await fetch(`${SpeechConfig.voicevoxUrl}/version`, {
+                method: 'GET',
+                signal: AbortSignal.timeout(3000)
+            });
+            if (!res.ok) throw new Error();
+            dot.className = 'voice-status-dot ok';
+            statusTxt.textContent = '接続OK';
+        } catch {
+            dot.className = 'voice-status-dot err';
+            statusTxt.textContent = '接続できません';
+        }
+    }
+
+    // テスト再生
+    testBtn.addEventListener('click', async () => {
+        userInteracted = true;
+        testBtn.disabled = true;
+        testBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg> 再生中…`;
+        dot.className = 'voice-status-dot busy';
+        statusTxt.textContent = '合成中…';
+
+        const text = '読み上げは有効です。';
+        try {
+            const qRes = await fetch(
+                `${SpeechConfig.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${SpeechConfig.speakerId}`,
+                { method: 'POST', signal: AbortSignal.timeout(5000) }
+            );
+            const sRes = await fetch(
+                `${SpeechConfig.voicevoxUrl}/synthesis?speaker=${SpeechConfig.speakerId}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(await qRes.json()),
+                    signal: AbortSignal.timeout(5000)
+                }
+            );
+            const audio = new Audio(URL.createObjectURL(await sRes.blob()));
+            audio.play();
+            dot.className = 'voice-status-dot ok';
+            statusTxt.textContent = '接続OK';
+        } catch {
+            dot.className = 'voice-status-dot err';
+            statusTxt.textContent = '接続できません';
+        } finally {
+            testBtn.disabled = false;
+            testBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg> テスト再生`;
+        }
+    });
+})();

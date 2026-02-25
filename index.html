@@ -45,6 +45,48 @@
                 <p class="eq-history_title">過去の地震</p>
                 <div id="eq-history-list"></div>
             </div>
+            <!--音声設定-->
+            <div class="voice-settings">
+                <p class="voice-settings_title">音声読み上げ</p>
+
+                <div class="voice-toggle-row">
+                    <span class="voice-toggle-label">読み上げ</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="voice-enabled-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="voice-detail" id="voice-detail">
+                    <div class="voice-divider"></div>
+
+                    <div class="voice-param-row">
+                        <span class="voice-param-label">最小震度</span>
+                        <select class="voice-select" id="voice-min-scale">
+                            <option value="0">すべて</option>
+                            <option value="10">震度1以上</option>
+                            <option value="20">震度2以上</option>
+                            <option value="30">震度3以上</option>
+                            <option value="40">震度4以上</option>
+                            <option value="45">震度5弱以上</option>
+                            <option value="50">震度5強以上</option>
+                        </select>
+                    </div>
+
+                    <div class="voice-param-row">
+                        <div class="voice-status">
+                            <span class="voice-status-dot" id="voice-status-dot"></span>
+                            <span class="voice-status-text" id="voice-status-text">未確認</span>
+                        </div>
+                        <button class="voice-test-btn" id="voice-test-btn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            テスト再生
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <a class="feedback-button" href="https://forms.gle/V1J5r4MjhNfB1Tz26" target="_blank">お問い合わせ</a>
 
